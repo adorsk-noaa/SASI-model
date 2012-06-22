@@ -8,7 +8,7 @@ import re
 class CSV_DAO(object):
 
 	def __init__(self, csv_file, model=None):
-		self.rows = []
+		self.items = []
 		self.model = model
 		if isinstance(csv_file, str):
 			csv_file = open(csv_file, 'rb')
@@ -36,12 +36,30 @@ class CSV_DAO(object):
 			for c in self.columns:
 				value = eval("%s('%s')" % (c['type'], row[c['index']]))
 				setattr(obj, c['name'], value)
-			self.rows.append(obj)
+			self.items.append(obj)
+
 
 	def all(self):
-		return self.rows
+		return self.items
 
+	def query(self, filters=[]):
+		results = []
 
+		for item in self.items:
+			passes = True
 
+			# Assumes filters are like: {'entity': {'expression': '{prop}'}, 'op': '==', 'value': 'foo'}.
+			for f in filters:
+				entity = f['entity']
+				expression = entity['expression']
+				entity_code = re.sub('{(.*?)}', r'getattr(item, "\1")', entity['expression'])
+				filter_code = "%s %s %s" % (entity_code, f['op'], f['value'])
+				if not eval(filter_code):
+					passes = False
+					break
+					
+			if passes:
+				results.append(item)
 
+		return results
 

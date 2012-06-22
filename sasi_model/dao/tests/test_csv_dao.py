@@ -12,11 +12,19 @@ class Test_CSV_DAO(unittest.TestCase):
 		csv_file = open(self.csv_filename, 'wb')
 		writer = csv.writer(csv_file)
 
+		class TestClass(object):
+			attr1 = None
+			attr2 = None
+			attr3 = None
+			attr4 = None
+
+		self.model = TestClass
+
 		columns = [
-				{'name': 'col1', 'type': 'int'},
-				{'name': 'col2', 'type': 'str'},
-				{'name': 'col3', 'type': 'float'},
-				{'name': 'col4'},
+				{'name': 'attr1', 'type': 'int'},
+				{'name': 'attr2', 'type': 'str'},
+				{'name': 'attr3', 'type': 'float'},
+				{'name': 'attr4'},
 				]
 		headers = []
 		for c in columns:
@@ -43,9 +51,13 @@ class Test_CSV_DAO(unittest.TestCase):
 		os.unlink(self.csv_filename)
 
 	def test_CSV_DAO(self):
-		csv_dao = CSV_DAO(self.csv_filename)
+		csv_dao = CSV_DAO(self.csv_filename, model=self.model)
 
-		print csv_dao.all()
+		all_results = csv_dao.all()
+
+		queried_results =csv_dao.query(filters=[
+			{'entity': {'expression': '{attr1}'}, 'op': 'in', 'value': [2,3]}
+			])
 	
 
 if __name__ == '__main__':
