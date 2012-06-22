@@ -7,8 +7,9 @@ import re
 
 class CSV_DAO(object):
 
-	def __init__(self, csv_file):
+	def __init__(self, csv_file, model=None):
 		self.rows = []
+		self.model = model
 		if isinstance(csv_file, str):
 			csv_file = open(csv_file, 'rb')
 		reader = csv.reader(csv_file)
@@ -25,16 +26,17 @@ class CSV_DAO(object):
 				column_type = 'str'
 
 			self.columns.append({
+				'name': column_name,
 				'index': i,
 				'type': column_type
 			})
 
 		for row in reader:
-			parsed_row = []
+			obj = self.model()
 			for c in self.columns:
 				value = eval("%s('%s')" % (c['type'], row[c['index']]))
-				parsed_row.append(value)
-			self.rows.append(parsed_row)
+				setattr(obj, c['name'], value)
+			self.rows.append(obj)
 
 	def all(self):
 		return self.rows
