@@ -9,3 +9,6 @@ conf = {
         'Trap': 'GC6'
     }
 }
+
+import secrets
+conf.update(secrets.secrets)

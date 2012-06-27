@@ -11,7 +11,7 @@ import shapely.wkb, shapely.geometry
 
 class SHP_DAO(Memory_DAO):
 
-    def __init__(self, shp_file, model=None):
+    def __init__(self, shp_file, model=None, limit=None):
         items = []
 
         # Open shapefile and get source SRS.
@@ -28,7 +28,9 @@ class SHP_DAO(Memory_DAO):
         field_count = layer_def.GetFieldCount()
         fields = [layer_def.GetFieldDefn(i).GetName() for i in range(field_count)]
 
+        counter = 0
         for feature in layer:
+            if counter == limit: break
             obj = model()
 
             # Get fields.
@@ -36,11 +38,11 @@ class SHP_DAO(Memory_DAO):
             for i in range(field_count): 
                 field = fields[i]
                 value = feature.GetField(i)
-                if hasattr(model, field):
+                if hasattr(obj, field):
                     setattr(obj, field, value)
 
             # Get geometry and reproject.
-            if hasattr(model, 'geom'): 
+            if hasattr(obj, 'geom'): 
                 ogr_g = feature.GetGeometryRef()
                 ogr_g = feature.GetGeometryRef()
                 ogr_g.TransformTo(target_srs)
@@ -50,7 +52,10 @@ class SHP_DAO(Memory_DAO):
                 geom = shapely.wkb.loads(ogr_g.ExportToWkb())
                 if geom.geom_type =='Polygon':
                     geom = shapely.geometry.MultiPolygon([(geom.exterior.coords, geom.interiors )])
-                model.geom = geom
+                obj.geom = geom.wkt
+
+            items.append(obj)
+            counter += 1
 
         Memory_DAO.__init__(self, items=items)
 
