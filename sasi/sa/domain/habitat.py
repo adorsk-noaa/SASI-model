@@ -12,6 +12,7 @@ table = Table('habitat', metadata,
 		Column('substrate', String),
 		Column('energy', String),
 		Column('z', Float),
+		Column('area', Float),
 		GeometryExtensionColumn('geom', MultiPolygon(2)),
 		)
 

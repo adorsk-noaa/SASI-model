@@ -1,13 +1,15 @@
 """
 This class provides an interface to data stored in a shp file.
 """
-
-import re
+import sasi.conf as conf
 from memory_dao import Memory_DAO
+
 #@TODO: make this platform agnostic later.
 # E.g. use JTS if using jython.
 import ogr
 import shapely.wkb, shapely.geometry
+
+import sys
 
 class SHP_DAO(Memory_DAO):
 
@@ -31,6 +33,9 @@ class SHP_DAO(Memory_DAO):
         counter = 0
         for feature in layer:
             if counter == limit: break
+
+            if conf.conf['verbose']:
+                if (counter % 100) == 0: print >> sys.stderr, "at record #%s" % counter
             obj = model()
 
             # Get fields.

@@ -60,7 +60,9 @@ class SASI_Model(object):
         # Get habitat types, grouped by gear categories that can be applied to those
         # habitat types. 
         if conf.conf['verbose']: print >> sys.stderr, "Getting habitats by gear categories..."
-        self.h_by_gcat = self.va.get_habitats_by_gear_categories()
+        self.ht_by_gcat = self.va.get_habitats_by_gear_categories()
+
+        print self.ht_by_gcat
 
         # Get feature codes, grouped by gear categories that can be applied to those
         # feature types.
@@ -69,7 +71,7 @@ class SASI_Model(object):
 
         # Get features grouped by category, keyed by habitat types.
         if conf.conf['verbose']: print >> sys.stderr, "Getting features by gear categories..."
-        self.f_by_h = self.va.get_features_by_habitats()
+        self.f_by_ht = self.va.get_features_by_habitats()
 
         # Create feature lookup to improve perfomance.
         if conf.conf['verbose']: print >> sys.stderr, "Creating features lookup..."
@@ -116,34 +118,25 @@ class SASI_Model(object):
                     'ht': {}
                     }
 
-            # Get cell's habitats.
-            cell_habitats = c.habitats
+            # For each habitat type in the cell's habitat composition...
+            for ht, pct_area in c.habitat_composition.items():
 
-            # Group habitats by habitat type.
-            habitats_by_type = {}
-            for h in cell_habitats:
-                habitat_type = h.habitat_type
-                habitats_by_type.setdefault(habitat_type, [])
-                habitats_by_type[habitat_type].append(h)
-
-            # For each habitat type...
-            for ht in habitats_by_type.keys():
+                ht_key = ','.join(ht)
 
                 # Create entry for ht in c_ht_f.
-                c_ht_f[c]['ht'][ht] = {}
+                c_ht_f[c]['ht'][ht_key] = {}
 
-                # Calculate combined area.
-                ht_area = sum([h.area for h in habitats_by_type[ht]])
-                c_ht_f[c]['ht'][ht]['area'] = ht_area
+                # Save percent area.
+                c_ht_f[c]['ht'][ht_key]['percent_cell_area'] = pct_area
 
-                # Calculate percentage of cell area.
-                c_ht_f[c]['ht'][ht]['percent_cell_area'] = ht_area/c.area
+                # Calculate habitat type area.
+                c_ht_f[c]['ht'][ht_key]['area'] = c.area * pct_area
 
                 # Get features for habitat, grouped by featured category.
-                c_ht_f[c]['ht'][ht]['f'] = {}
-                for feature_category, feature_ids in self.f_by_h[ht.id].items():
+                c_ht_f[c]['ht'][ht_key]['f'] = {}
+                for feature_category, feature_ids in self.f_by_ht[ht_key].items():
                     features = [self.features[f_id] for f_id in feature_ids]
-                    c_ht_f[c]['ht'][ht]['f'][feature_category] = features 
+                    c_ht_f[c]['ht'][ht_key]['f'][feature_category] = features 
 
         return c_ht_f
 
@@ -195,14 +188,7 @@ class SASI_Model(object):
 
             # Get contact-adjusted fishing efforts for the cell.
 
-            # TMP HACK FOR COMPARING TO MODEL.
-            cell_efforts = []
-            realized_start_year = 2000
-            if t <= realized_start_year:
-                cell_efforts =  self.c_t_e.get((c,realized_start_year),[])
-            else:
-                cell_efforts =  self.c_t_e.get((c, t),[])
-            #cell_efforts = self.c_t_e.get((c,t),[])
+            cell_efforts = self.c_t_e.get((c,t),[])
 
             # For each effort...
             for effort in cell_efforts:
@@ -210,7 +196,7 @@ class SASI_Model(object):
                 # Get cell's habitat types which are relevant to the effort.
                 relevant_habitat_types = []
                 for ht in self.c_ht_f[c]['ht'].keys():
-                    if ht.id in self.h_by_gcat[effort.gear.category]: relevant_habitat_types.append(ht)
+                    if ht in self.ht_by_gcat[effort.gear.category]: relevant_habitat_types.append(ht)
 
                 # If there were relevant habitat types...
                 if relevant_habitat_types:
@@ -255,7 +241,7 @@ class SASI_Model(object):
                                     # Get vulnerability assessment for the effort.
                                     vulnerability_assessment = self.va.get_assessment(
                                             gear_category = effort.gear.category,
-                                            habitat_key = ht.id,
+                                            habitat_key = ht,
                                             feature_code = f.id,
                                             )
 
@@ -288,10 +274,9 @@ class SASI_Model(object):
             if t == self.t0:
                 self.results[c][t]['ZZ'] = self.results[c][t]['Z']
             # Otherwise, if a later timestep...
-        else:
-            # Get keys which had ZZ for the previous timestep, or Z for the current timestep.
+            else:
+                # Get keys which had ZZ for the previous timestep, or Z for the current timestep.
                 z_zz_keys = set(self.results[c][t - self.dt]['ZZ'].keys() + self.results[c][t]['Z'].keys())
-
                 # For each key...
                 for k in z_zz_keys:
 
