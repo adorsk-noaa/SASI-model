@@ -12,11 +12,11 @@ import shapely.wkt, shapely.wkb
 class CSV_DAO(Memory_DAO):
 
     def __init__(self, csv_file, model=None):
-        self.model = model
+        model = model
         if isinstance(csv_file, str):
             csv_file = open(csv_file, 'rb')
         reader = csv.reader(csv_file)
-        self.columns = []
+        columns = []
         headers = reader.next()
         for i in range(len(headers)):
             header = headers[i]
@@ -28,7 +28,7 @@ class CSV_DAO(Memory_DAO):
                 column_name = header
                 column_type = 'str'
 
-            self.columns.append({
+            columns.append({
                 'name': column_name,
                 'index': i,
                 'type': column_type
@@ -36,9 +36,9 @@ class CSV_DAO(Memory_DAO):
 
         items = []
         for row in reader:
-            obj = self.model()
+            obj = model()
             try:
-                for c in self.columns:
+                for c in columns:
                     if c['type'] == 'geom_wkt':
                         value = shapely.wkt.loads(row[c['index']])
                     elif c['type'] == 'geom_wkb':
