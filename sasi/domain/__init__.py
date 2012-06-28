@@ -1,5 +1,6 @@
 from cell import Cell
 from habitat import Habitat
+from substrate import Substrate
 from feature import Feature
 from gear import Gear
 from va import VulnerabilityAssessment
