@@ -1,11 +1,14 @@
 import sasi.conf as conf
 from sasi.dao import CSV_DAO, SHP_DAO, SA_DAO
-from sasi.domain import Cell, Feature, Habitat, Gear, VulnerabilityAssessment
+from sasi.domain import Cell, Feature, Substrate, Habitat, Gear, VulnerabilityAssessment
 from sasi.domain.effort_models import NominalEffortPerGearModel
 from sasi.domain import SASI_Model
 
 import sasi.sa as sa
 import sasi.sa.domain
+
+import sasi.util.georefine
+import shapely.wkt, shapely.wkb
 
 from geoalchemy.functions import functions as geo_func
 from sqlalchemy import func
@@ -32,6 +35,9 @@ def main():
     #habs_shp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'test_data', 'habitats.shp')
     #habs_dao = SHP_DAO(shp_file=habs_shp_file, model=Habitat, limit=None)
     habs_dao = SA_DAO(session=sa.session, primary_class=Habitat)
+
+    substrates_csv_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'test_data', 'substrates.csv')
+    substrates_dao = CSV_DAO(csv_file=substrates_csv_file, model=Substrate)
 
     features_csv_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'test_data', 'features.csv')
     features_dao = CSV_DAO(csv_file=features_csv_file, model=Feature)
@@ -67,8 +73,22 @@ def main():
                 fields = ['a','x','y','z','znet']
                 print "  %s" % ",".join(["%s: %.2f" % (f, getattr(r,f)) for f in fields])
     """
-    print len(sasi_model.results)
-        
+
+    if conf.conf['verbose']: print >> sys.stderr, "Creating georefine package..."
+
+    # Create GeoRefine package.
+    georefine_package = create_georefine_package(
+            cells=cells_dao.all(), 
+            substrates=substrates_dao.all(), 
+            features=features_dao.all(), 
+            gears=gears_dao.all(), 
+            results=sasi_model.results
+            )
+
+    print "Generated georefine package is: %s" % georefine_package
+    print "Done."
+
+
 # Calculate cell habitat compositions, taking advantage of
 # PostGIS functions.
 def calculate_cell_compositions(cells_dao, habs_dao):
@@ -126,6 +146,60 @@ def calculate_cell_compositions(cells_dao, habs_dao):
     for t in tables:
         sa.metadata.tables[table].drop(bind=sa.engine, checkfirst=True)
     """
+
+def create_georefine_package(cells=[], substrates=[], features=[], gears=[], results=[]):
+
+    # Define a geometry formatter.
+    def geom_formatter(cell):
+        return shapely.wkt.dumps(shapely.wkb.loads("%s" % cell.geom.geom_wkb))
+
+    # Create data files.
+    data_files = []
+
+    # Cells.
+    cells_data_file = sasi.util.georefine.objects_to_csv_file(
+            objects=cells,
+            fields=[ 'id', 'area', {'name': 'geom', 'formatter': geom_formatter}]
+            )
+    data_files.append({'name': 'cell.csv', 'path': cells_data_file})
+
+    # Substrates.
+    substrates_data_file = sasi.util.georefine.objects_to_csv_file(
+            objects=substrates,
+            fields=[ 'id', 'name'] 
+            )
+    data_files.append({'name': 'substrate.csv', 'path': substrates_data_file})
+
+    # Features.
+    features_data_file = sasi.util.georefine.objects_to_csv_file(
+            objects=features,
+            fields=[ 'id', 'name', 'category'] 
+            )
+    data_files.append({'name': 'feature.csv', 'path': features_data_file})
+
+    # Gears.
+    gears_data_file = sasi.util.georefine.objects_to_csv_file(
+            objects=gears,
+            fields=[ 'id', 'name', 'category'] 
+            )
+    data_files.append({'name': 'gear.csv', 'path': gears_data_file})
+
+    # Results.
+    results_data_file = sasi.util.georefine.objects_to_csv_file(
+            objects=results,
+            fields=[ 'id', 't', 'cell_id', 'gear_id', 'substrate_id', 'feature_id',
+                'a', 'x', 'y', 'z', 'znet'] 
+            )
+    data_files.append({'name': 'result.csv', 'path': results_data_file})
+
+    # Create georefine tar.gz, including app config and schema.
+    georefine_tgz = sasi.util.georefine.create_gr_project_file(
+            schema_file=conf.conf['results_georefine_schema'],
+            app_config_file=conf.conf['results_georefine_app_config'],
+            data_files=data_files
+            )
+
+    return georefine_tgz
 
 
 if __name__ == '__main__':
