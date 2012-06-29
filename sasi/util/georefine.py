@@ -7,7 +7,7 @@ import csv
 import tarfile
 import os
 
-def objects_to_csv_file(objects=[], fields=[], prefix=None):
+def objects_to_csv_file(objects=[], fields=[], prefix=''):
     csv_file = tempfile.NamedTemporaryFile(prefix=prefix, suffix=".csv", delete=False)
     writer = csv.writer(csv_file)
     for i in range(len(fields)):
