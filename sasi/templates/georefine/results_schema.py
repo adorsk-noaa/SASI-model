@@ -48,10 +48,11 @@ class Result(object):
     substrate = None
     energy = None
     feature = None
+    a = None
     x = None
     y = None
     z = None
-    zinf = None
+    znet = None
 classes['Result'] = Result
 
 # Set primary class.
@@ -106,15 +107,16 @@ result_table = Table('result', metadata,
         Column('t', Integer),
         Column('cell_id', Integer, ForeignKey('cell.id')),
         Column('gear_id', Integer, ForeignKey('gear.id')),
-        Column('substrate.id', Integer, ForeignKey('substrate.id')),
-        Column('feature.id', Integer, ForeignKey('feature.id')),
+        Column('substrate_id', Integer, ForeignKey('substrate.id')),
+        Column('feature_id', Integer, ForeignKey('feature.id')),
+        Column('a', Float),
         Column('x', Float),
         Column('y', Float),
         Column('z', Float),
-        Column('zinf', Float),
+        Column('znet', Float),
         )
 tables.append({'id': 'result', 'table': result_table})
-mapper(result, result_table, properties={
+mapper(Result, result_table, properties={
     'cell': relationship(Cell),
     'gear': relationship(Gear),
     'substrate': relationship(Substrate),
