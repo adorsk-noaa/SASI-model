@@ -67,7 +67,7 @@ cell_table = Table('cell', metadata,
         Column('id', Integer, primary_key=True),
         Column('z', Float),
         Column('area', Float),
-        GeometryExtensionColumn('geom', Polygon(2)),
+        GeometryExtensionColumn('geom', MultiPolygon(2)),
         )
 GeometryDDL(cell_table)
 tables.append({'id': 'cell', 'table': cell_table})
@@ -77,7 +77,7 @@ mapper(Cell, cell_table, properties = {
 
 # Substrate
 substrate_table = Table('substrate', metadata,
-        Column('id', Integer, primary_key=True),
+        Column('id', String, primary_key=True),
         Column('name', String),
         )
 tables.append({'id': 'substrate', 'table': substrate_table})
@@ -85,7 +85,7 @@ mapper(Substrate, substrate_table)
 
 # Feature
 feature_table = Table('feature', metadata,
-        Column('id', Integer, primary_key=True),
+        Column('id', String, primary_key=True),
         Column('name', String),
         Column('category', String),
         )
@@ -94,7 +94,7 @@ mapper(Feature, feature_table)
 
 # Gear
 gear_table = Table('gear', metadata,
-        Column('id', Integer, primary_key=True),
+        Column('id', String, primary_key=True),
         Column('name', String),
         Column('category', String),
         )
@@ -106,9 +106,9 @@ result_table = Table('result', metadata,
         Column('id', Integer, primary_key=True),
         Column('t', Integer),
         Column('cell_id', Integer, ForeignKey('cell.id')),
-        Column('gear_id', Integer, ForeignKey('gear.id')),
-        Column('substrate_id', Integer, ForeignKey('substrate.id')),
-        Column('feature_id', Integer, ForeignKey('feature.id')),
+        Column('gear_id', String, ForeignKey('gear.id')),
+        Column('substrate_id', String, ForeignKey('substrate.id')),
+        Column('feature_id', String, ForeignKey('feature.id')),
         Column('a', Float),
         Column('x', Float),
         Column('y', Float),
