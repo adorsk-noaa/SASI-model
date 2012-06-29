@@ -1,4 +1,5 @@
 import sasi.conf as conf
+from sasi.domain import Result
 import sys
 
 class SASI_Model(object):
@@ -88,22 +89,13 @@ class SASI_Model(object):
         if conf.conf['verbose']: print >> sys.stderr, "Creating cells-time-effort lookup..."
         self.c_t_e = self.get_c_t_e_lookup()
 
-        # Initialize results, grouped by time, cell, and field.
+        # Initialize results, grouped by time and cell.
         if conf.conf['verbose']: print >> sys.stderr, "Initializing results..."
         self.results = {}
-        for c in self.c_ht_f.keys():
-            self.results[c] = {}
-            for t in range(self.t0, self.tf + self.dt, self.dt):
-                self.results[c][t] = {}
-                for field in [
-                        'A', # Contact-Adjusted Swept Area.
-                        'X', # Recovered Swept Area.
-                        'Y', # Modified Swept Area.
-                        'Z', # Instantaneous X - Y
-                        'ZZ', # Cumulative Z.
-                        ]:
-                    self.results[c][t][field] = {}
-
+        for t in range(self.t0, self.tf + self.dt, self.dt):
+            self.results[t] = {}
+            for c in self.c_ht_f.keys():
+                self.results[t][c] = {}
 
     def get_c_ht_f_lookup(self):
 
@@ -187,7 +179,6 @@ class SASI_Model(object):
             cell_counter += 1
 
             # Get contact-adjusted fishing efforts for the cell.
-
             cell_efforts = self.c_t_e.get((c,t),[])
 
             # For each effort...
@@ -231,13 +222,6 @@ class SASI_Model(object):
                                 # For each feature...
                                 for f in relevant_features:
 
-                                    # Generate an index key for the identifing the results by habitat type, gear, and feature.
-                                    index_key = (ht, effort.gear, f)
-
-                                    # Add the resulting contact-adjusted
-                                    # swept area to the A table.
-                                    self.results[c][t]['A'][index_key] = self.results[c][t]['A'].get(index_key,0.0) + swept_area_per_feature
-
                                     # Get vulnerability assessment for the effort.
                                     vulnerability_assessment = self.va.get_assessment(
                                             gear_category = effort.gear.category,
@@ -249,49 +233,52 @@ class SASI_Model(object):
                                     omega = self.omegas.get(vulnerability_assessment['S'])
                                     tau = self.taus.get(vulnerability_assessment['R'])
 
-                                    # Calculate adverse effect swept area.
-                                    adverse_effect_swept_area = swept_area_per_feature * omega
+                                    # Get or create the result corresponding to the
+                                    # current set of parameters.
+                                    result_key = (ht, effort.gear, f)
+                                    (substrate_id,energy_id) = ht.split(',')
+                                    result = self.get_or_create_result(t, c, result_key)
 
-                                    # Add to adverse effect table.
-                                    self.results[c][t]['Y'][index_key] = self.results[c][t]['Y'].get(index_key,0.0) + adverse_effect_swept_area
+                                    # Add the resulting contact-adjusted
+                                    # swept area to the a field.
+                                    result.a += swept_area_per_feature
+
+                                    # Calculate adverse effect swept area and add to y field.
+                                    adverse_effect_swept_area = swept_area_per_feature * omega
+                                    result.y += adverse_effect_swept_area
 
                                     # Calculate recovery per timestep.
                                     recovery_per_dt = adverse_effect_swept_area/tau
 
-                                    # Add recovery to future recovery table entries.
+                                    # Add recovery to x field for future entries.
                                     for future_t in range(t + 1, t + tau + 1, self.dt):
                                         if future_t <= self.tf:
-                                            self.results[c][future_t]['X'][index_key] = self.results[c][future_t]['X'].get(index_key, 0.0) + recovery_per_dt 
+                                            future_result = self.get_or_create_result(future_t, c, result_key)
+                                            future_result.x += recovery_per_dt
 
-            # Get keys which were affected during this timestep.
-            affected_keys = set(self.results[c][t]['X'].keys() + self.results[c][t]['Y'].keys())
+                                    # Calculate Z.
+                                    result.z = result.x - result.y
 
-            # Calculate Z or each affected key.
-            for k in affected_keys: 
-                self.results[c][t]['Z'][k] = self.results[c][t]['X'].get(k, 0.0) - self.results[c][t]['Y'].get(k, 0.0)
+                                    # Update znet
+                                    result.znet += result.z
 
-            # If first time step, set ZZ = Z.
-            if t == self.t0:
-                self.results[c][t]['ZZ'] = self.results[c][t]['Z']
-            # Otherwise, if a later timestep...
-            else:
-                # Get keys which had ZZ for the previous timestep, or Z for the current timestep.
-                z_zz_keys = set(self.results[c][t - self.dt]['ZZ'].keys() + self.results[c][t]['Z'].keys())
-                # For each key...
-                for k in z_zz_keys:
+                                    # End of the iteration.
 
-                    # Set ZZ for current timestep as previous ZZ + current Z.
-                    self.results[c][t]['ZZ'][k] = self.results[c][t - self.dt]['ZZ'].get(k, 0.0) + self.results[c][t]['Z'].get(k, 0.0)
+    def get_or_create_result(self, t, cell, result_key):
+        (substrate_id,energy_id) = result_key[0].split(',')
+        gear = result_key[1]
+        feature = result_key[2]
+        return self.results[t][cell].setdefault(result_key, Result(
+            t=t,
+            cell_id=cell.id,
+            gear_id=gear.id,
+            substrate_id=substrate_id,
+            energy_id=energy_id,
+            feature_id=feature.id,
+            a=0.0,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            znet=0.0
+            ))
 
-
-    # Format index key from key components.
-    def get_index_key(self, time=None, cell=None, habitat_type=None, gear=None, feature=None):
-        index_key = (
-                time,
-                cell,	
-                habitat_type,
-                gear,
-                feature
-                )
-
-        return index_key

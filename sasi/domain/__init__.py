@@ -4,4 +4,5 @@ from substrate import Substrate
 from feature import Feature
 from gear import Gear
 from va import VulnerabilityAssessment
+from result import Result
 from sasi_model import SASI_Model

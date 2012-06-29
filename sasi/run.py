@@ -57,9 +57,14 @@ def main():
 
     sasi_model = SASI_Model(t0=t0, tf=tf, dt=dt, cell_source=cells_dao, feature_source=features_dao, effort_model=effort_model, va=va)
     sasi_model.run()
-    print sasi_model.results
-
-
+    for t, t_results in sasi_model.results.items():
+        print "t: %s" % (t)
+        for cell, tc_results in t_results.items():
+            print " cell: %s" % (cell.id)
+            for r in tc_results.values():
+                fields = ['a','x','y','z','znet']
+                print "  %s" % ",".join(["%s: %.2f" % (f, getattr(r,f)) for f in fields])
+        
 # Calculate cell habitat compositions, taking advantage of
 # PostGIS functions.
 def calculate_cell_compositions(cells_dao, habs_dao):
