@@ -23,17 +23,21 @@ class SA_DAO(object):
             }
 
 
-    def __init__(self, session=None, primary_class=None):
+    def __init__(self, session=None, primary_class=None, default_filters=[]):
         self.session = session
         self.primary_class = primary_class
+        self.default_filters = default_filters
 
-    def all(self):
-        return self.session.query(self.primary_class).all()
+    def all(self, **kwargs):
+        return self.query(data_entities=[{'expression': "{%s}" % self.primary_class.__name__ }], **kwargs)
 
-    def query(self):
+    def query(self, **kwargs):
         return self.get_query(**kwargs).all()
 
-    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[]):
+    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[], ignore_default_filters=False):
+
+        if not ignore_default_filters:
+            filters = filters + self.default_filters
 
         # If no alias was given, registry with aliased primary class.
         if not primary_alias:
@@ -253,7 +257,7 @@ class SA_DAO(object):
     def get_mapped_entity(self, registry, entity):
 
         # Set default label on entity if none given.
-        entity.setdefault('id', id(entity))
+        entity.setdefault('id', str(id(entity)))
         entity.setdefault('label', entity['id'])
 
         # Create key for entity (expression + label).
@@ -274,23 +278,30 @@ class SA_DAO(object):
         def replace_token_with_mapped_entity(m):
             entity_id = m.group(1)
             parts = entity_id.split('.')
-            parent_id = '.'.join(parts[:-1])
-            child_attr = parts[-1]
-            mapped_parent = registry.get(parent_id)
-            mapped_entity = getattr(mapped_parent, child_attr)
+            if len(parts) == 1:
+                parent_id = parts[0]
+                mapped_entity = registry.get(parent_id)
+            else:
+                parent_id = '.'.join(parts[:-1])
+                child_attr = parts[-1]
+                mapped_parent = registry.get(parent_id)
+                mapped_entity = getattr(mapped_parent, child_attr)
             mapped_entities[entity_id] = mapped_entity
             return "mapped_entities['%s']" % entity_id
 
         entity_code = re.sub('{(.*?)}', replace_token_with_mapped_entity, entity['expression'])
 
         # Evaluate and label.
-        mapped_entity = eval(entity_code).label(entity['label'])
+        mapped_entity = eval(entity_code)
+        if isinstance(mapped_entity, AliasedClass): pass
+        else:
+            mapped_entity = mapped_entity.label(entity['label'])
 
         # Register.
         registry[entity_key] = mapped_entity
 
         return mapped_entity
-    
+
 
     # Select values for a given entity.
     def get_entity_values(self, entity, as_dicts=True):
