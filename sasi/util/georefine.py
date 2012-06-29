@@ -12,13 +12,13 @@ def objects_to_csv_file(objects=[], fields=[], prefix=''):
     writer = csv.writer(csv_file)
     for i in range(len(fields)):
         if type(fields[i]) == str:
-            fields[i] = {'name': fields[i]}
-    writer.writerow([f['name'] for f in fields])
+            fields[i] = {'attr': fields[i], 'colname': fields[i]}
+    writer.writerow([f['colname'] for f in fields])
     for obj in objects:
         row = []
         for f in fields:
             if not f.has_key('formatter'):
-                f['formatter'] = lambda o: getattr(o, f['name'])
+                f['formatter'] = lambda o: getattr(o, f['attr'])
             row.append(f['formatter'](obj))
         writer.writerow(row)
     csv_file.close()
