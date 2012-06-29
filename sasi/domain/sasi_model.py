@@ -51,6 +51,11 @@ class SASI_Model(object):
                     }
             self.omegas = omegas
 
+        # Results, grouped by time and cell.
+        self.results_t_c = {}
+        # Results, as a list.
+        self.results = []
+
         self.setup()
 
     def setup(self):
@@ -91,11 +96,10 @@ class SASI_Model(object):
 
         # Initialize results, grouped by time and cell.
         if conf.conf['verbose']: print >> sys.stderr, "Initializing results..."
-        self.results = {}
         for t in range(self.t0, self.tf + self.dt, self.dt):
-            self.results[t] = {}
+            self.results_t_c[t] = {}
             for c in self.c_ht_f.keys():
-                self.results[t][c] = {}
+                self.results_t_c[t][c] = {}
 
     def get_c_ht_f_lookup(self):
 
@@ -268,17 +272,24 @@ class SASI_Model(object):
         (substrate_id,energy_id) = result_key[0].split(',')
         gear = result_key[1]
         feature = result_key[2]
-        return self.results[t][cell].setdefault(result_key, Result(
-            t=t,
-            cell_id=cell.id,
-            gear_id=gear.id,
-            substrate_id=substrate_id,
-            energy_id=energy_id,
-            feature_id=feature.id,
-            a=0.0,
-            x=0.0,
-            y=0.0,
-            z=0.0,
-            znet=0.0
-            ))
+        # If result for key does not exist yet, create it and
+        # add it to the lookup and list.
+        if not self.results_t_c[t][cell].has_key(result_key):
+            new_result = Result(
+                    t=t,
+                    cell_id=cell.id,
+                    gear_id=gear.id,
+                    substrate_id=substrate_id,
+                    energy_id=energy_id,
+                    feature_id=feature.id,
+                    a=0.0,
+                    x=0.0,
+                    y=0.0,
+                    z=0.0,
+                    znet=0.0
+                    )
+            self.results_t_c[t][cell][result_key] = new_result
+            self.results.append(new_result)
+
+        return self.results_t_c[t][cell][result_key]
 
