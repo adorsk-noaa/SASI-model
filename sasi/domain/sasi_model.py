@@ -44,10 +44,10 @@ class SASI_Model(object):
         # omega (stochastic modifier for damage)
         if not omegas:
             omegas = {
-                    '0' : 10,
-                    '1' : 25,
-                    '2' : 50,
-                    '3' : 100
+                    '0' : .10,
+                    '1' : .25,
+                    '2' : .50,
+                    '3' : 1
                     }
             self.omegas = omegas
 
@@ -67,8 +67,6 @@ class SASI_Model(object):
         # habitat types. 
         if conf.conf['verbose']: print >> sys.stderr, "Getting habitats by gear categories..."
         self.ht_by_gcat = self.va.get_habitats_by_gear_categories()
-
-        print self.ht_by_gcat
 
         # Get feature codes, grouped by gear categories that can be applied to those
         # feature types.

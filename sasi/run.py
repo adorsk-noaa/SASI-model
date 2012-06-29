@@ -31,7 +31,7 @@ def main():
     #cells_shp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'test_data', 'cells.shp')
     #cells_dao = SHP_DAO(shp_file=cells_shp_file, model=Cell, limit=None)
     cells_dao = SA_DAO(session=sa.session, primary_class=Cell, default_filters=[
-        {'entity': {'expression': '{Cell.id}'}, 'op': '==', 'value': 1}
+        #{'entity': {'expression': '{Cell.id}'}, 'op': '==', 'value': 1}
         ])
 
     #habs_shp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'test_data', 'habitats.shp')
