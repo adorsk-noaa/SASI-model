@@ -72,7 +72,7 @@ cell_table = Table('cell', metadata,
 GeometryDDL(cell_table)
 tables.append({'id': 'cell', 'table': cell_table})
 mapper(Cell, cell_table, properties = {
-    'geom': GeometryColumn(test1_table.c.geom, comparator=PGComparator),
+    'geom': GeometryColumn(cell_table.c.geom, comparator=PGComparator),
     })
 
 # Substrate
