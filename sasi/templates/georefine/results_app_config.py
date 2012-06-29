@@ -62,12 +62,20 @@ map = {
 				"params": {
 					"transparent": True
 					},
-				"entity": {
-					"expression": "{Result.x}/{Result.area}",
+				"data_entity": {
+					"expression": "func.sum({Result.x}/{Result.cell.area})",
 					"label": "x",
 					"min": 0,
 					"max": 1,
 					},
+                "grouping_entities": [
+                    ],
+                "geom_entity": {
+                    "expression": "{Result.cell.geom}.RAW",
+                },
+                "geom_id_entity": {
+                    "expression": "{Result.cell.id}"
+                },
 				"filters": [],
 				"disabled": False
 				}
