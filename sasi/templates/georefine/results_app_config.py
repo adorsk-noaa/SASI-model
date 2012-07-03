@@ -1,18 +1,42 @@
+filter_groups = [
+        {'id': 'scenario'},
+        {'id': 'data', 'linked_groups': ['scenario']}
+        ]
+
 facets = [
+        #{
+			#'id': 'timestep',
+			#'label': 'Timestep',
+			#'type': 'time-slider',
+			#'grouping_entity': {
+				#'expression': '{Result.t}'
+				#},
+            #'value_type': 'numeric',
+            #'choices': [],
+			#'count_entity': {
+				#'expression': '1'
+                #},
+            #'filter_groups': ['data']
+			#},
         {
 			'id': 'substrate',
 			'label': 'Substrates',
 			'type': 'list',
 			'grouping_entity': {
-				'expression': '{Result.substrate.name}'
+				'expression': '{Result.substrate.id}',
+                'label_entity': {
+                    'expression': '{Result.substrate.name}'
+                    }
 				},
 			'count_entity': {
 				'expression': 'func.sum({Result.cell.area})'
 				},
+            'filter_groups': ['data']
 			},
 		]
 
 charts = {
+        'filter_groups': ['data'],
 		'category_fields': [
 			{
 				'id': 'substrates',
@@ -40,6 +64,7 @@ charts = {
 		}
 
 map = {
+        'filter_groups': ['data'],
 		"max_extent" : [-79, 31, -65, 45],
 		"graticule_intervals": [2],
 		"resolutions": [0.025, 0.0125, 0.00625, 0.003125, 0.0015625, 0.00078125],
