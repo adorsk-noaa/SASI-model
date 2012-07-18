@@ -3,93 +3,156 @@ filter_groups = [
         {'id': 'data'}
         ]
 
-facet_quantity_fields = [
-        {
-            'id': 'Result.cell.area:sum',
-            'label': 'Cell Area (km^2): sum',
-            'value_type': 'numeric',
-            'entity': {
-                'expression': 'func.sum({Result.cell.area})/1000000',
-                'format': '%.1e km^2'
-                }
-            },
-        {
-            'id': 'Result.cell.id:count',
-            'label': 'Number of relevant cells',
-            'value_type': 'numeric',
-            'entity': {
-                'expression': 'func.count({Result.cell.id})',
+facets = {
+        "quantity_fields": [
+            {
+                'id': 'result.cell.area:sum',
+                'label': 'Cell Area (km^2): sum',
+                'value_type': 'numeric',
+                'inner_query': {
+                    'SELECT': [{'ID': 'cell_area', 'EXPRESSION': '{{result.cell.area}}/1000000.0'}],
+                    'GROUP_BY': [
+                        '{{result.cell.id}}',
+                        {'ID': 'cell_area'}
+                        ],
+                    },
+                'outer_query': {
+                    'SELECT': [{'ID': 'sum_cell_area', 'EXPRESSION': 'func.sum({{inner.cell_area}})'}],
+                    },
+                'format': '%.1e km<sup>2</sup>'
+                },
+            {
+                'id': 'result.cell.id:count',
+                'label': 'Number of relevant cells',
+                'value_type': 'numeric',
+                'inner_query': {
+                    'SELECT': [{'ID': 'cell_id', 'EXPRESSION': '{{result.cell.id}}'}],
+                    'GROUP_BY': [{'ID': 'cell_id'}],
+                    },
+                'outer_query': {
+                    'SELECT': [{'ID': 'count_cell_id', 'EXPRESSION': 'func.count({{inner.cell_id}})'}],
+                    },
                 'format': '%s cells'
                 }
-            }
-        ]
+            ],
 
-facets = [
-        {
-            'id': 'timestep',
-            'label': 'Timestep',
-            'type': 'time-slider',
-            'grouping_entity': {
-                'expression': '{Result.t}'
+        "facets" : [
+            {
+                'id': 'timestep',
+                'label': 'Timestep',
+                'type': 'time-slider',
+                'KEY': {
+                    'KEY_ENTITY': {'ID': 'result_t', 'EXPRESSION': '{{result.t}}'},
+                    'LABEL_ENTITY': {'ID': 'result_t'},
+                    },
+                'value_type': 'numeric',
+                'choices': [],
+                'primary_filter_groups': ['scenario'],
+                'filter_entity': '{{result.t}}',
                 },
-            'sorting_entity': {
-                'expression': '{Result.t}',
-                'direction': 'asc'
-                },
-            'value_type': 'numeric',
-            'choices': [],
-            'filter_groups': ['scenario']
-            },
-        {
-            'id': 'substrate',
-            'label': 'Substrates',
-            'type': 'list',
-            'grouping_entity': {
-                'expression': '{Result.substrate.id}',
-                'label_entity': {
-                    'expression': '{Result.substrate.name}'
-                    }
-                },
-            'count_entity': {
-                'expression': 'func.sum({Result.cell.area})/(1000000)',
-                'format': '%.1e km^2'
-                },
-            'filter_groups': ['data'],
-            'base_filter_groups': ['scenario'],
-            },
-        ]
-
-charts = {
-        'filter_groups': ['data'],
-        'base_filter_groups': ['scenario'],
-        'category_fields': [
             {
                 'id': 'substrates',
-                'entity': {
-                    'expression': '{Result.substrate.name}',
-                    'all_values': True,
+                'label': 'Substrates',
+                'type': 'list',
+                'KEY': {
+                    'KEY_ENTITY': {'ID': 'substrate_id', 'EXPRESSION': '{{result.substrate.id}}'},
+                    'LABEL_ENTITY': {'ID': 'substrate_name', 'EXPRESSION': '{{result.substrate.name}}'},
                     },
+                'primary_filter_groups': ['data'],
+                'base_filter_groups': ['scenario'],
+                'filter_entity': '{{result.substrate.id}}'
+                },
+            {
+                'id': 'x',
+                'label': 'Numeric Test',
+                'type': 'numeric',
+                'KEY': {
+                    'KEY_ENTITY': {
+                        'ID': 'x', 
+                        'EXPRESSION': '{{result.x}}',
+                        'AS_HISTOGRAM': True,
+                        'ALL_VALUES': True
+                        },
+                    },
+                'primary_filter_groups': ['data'],
+                'base_filter_groups': ['scenario'],
+                'filter_entity': '{{result.x}}',
+                'range_auto': True
+                },
+            ]
+        }
+
+charts = {
+        'primary_filter_groups': ['data'],
+
+        'base_filter_groups': ['scenario'],
+
+        'category_fields': [
+            {
+                'id': 'x',
+                'label': 'X Test',
+                'value_type': 'numeric',
+                'KEY': {
+                    'KEY_ENTITY': {
+                        'ID': 'x', 
+                        'EXPRESSION': '{{result.x}}',
+                        'AS_HISTOGRAM': True,
+                        'ALL_VALUES': True
+                        },
+                    },
+                },
+            {
+                'id': 'substrates',
                 'label': 'Substrates',
                 'value_type': 'categorical',
+                'KEY': {
+                    'KEY_ENTITY': {
+                        'ID': 'substrate_id', 
+                        'EXPRESSION': '{{result.substrate.id}}',
+                        'ALL_VALUES': True
+                        },
+                    'LABEL_ENTITY': {'ID': 'substrate_name', 'EXPRESSION': '{{result.substrate.name}}'},
+                    },
                 },
             ],
 
-        'quantity_fields' : [
+        'quantity_fields': [
             {
-                'id': 'Result.cell.area:sum',
+                'id': 'result.cell.area:sum',
                 'label': 'Cell Area (km^2): sum',
                 'value_type': 'numeric',
-                'entity': {
-                    'expression': 'func.sum({Result.cell.area})/1000000',
-                    'min': 0,
-                    'maxauto': 'true',
-                    }
+                'inner_query': {
+                    'SELECT': [{'ID': 'cell_area', 'EXPRESSION': '{{result.cell.area}}/1000000.0'}],
+                    'GROUP_BY': [
+                        '{{result.cell.id}}',
+                        {'ID': 'cell_area'}
+                        ],
+                    },
+                'outer_query': {
+                    'SELECT': [{'ID': 'sum_cell_area', 'EXPRESSION': 'func.sum({{inner.cell_area}})'}],
+                    },
+                'format': '%.1e km<sup>2</sup>'
+                },
+            {
+                'id': 'result.cell.id:count',
+                'label': 'Number of relevant cells',
+                'value_type': 'numeric',
+                'inner_query': {
+                    'SELECT': [{'ID': 'cell_id', 'EXPRESSION': '{{result.cell.id}}'}],
+                    'GROUP_BY': [{'ID': 'cell_id'}],
+                    },
+                'outer_query': {
+                    'SELECT': [{'ID': 'count_cell_id', 'EXPRESSION': 'func.count({{inner.cell_id}})'}],
+                    },
+                'format': '%s cells'
                 }
             ]
         }
 
-map = {
-        'filter_groups': ['data'],
+
+maps = {
+        "primary_filter_groups": ['data'],
+        "base_filter_groups" : ['scenario'],
         "max_extent" : [-79, 31, -65, 45],
         "graticule_intervals": [2],
         "resolutions": [0.025, 0.0125, 0.00625, 0.003125, 0.0015625, 0.00078125],
@@ -100,7 +163,6 @@ map = {
             "disabled": True
             },
 
-        "base_filter_groups" : ['scenario'],
         "data_layers" : [
             {
                 "id": "x",
@@ -112,48 +174,48 @@ map = {
                 "params": {
                     "transparent": True
                     },
+                "inner_query": {
+                    'SELECT': [
+                        {'ID': 'data', 'EXPRESSION': 'func.sum({{result.x}}/{{result.cell.area}})'},
+                        ],
+                    'GROUP_BY': [
+                        {'ID': 'cell_id', 'EXPRESSION': '{{result.cell.id}}'},
+                        {'ID': 'cell_geom', 'EXPRESSION': 'RawColumn({{result.cell.geom}})'}
+                        ],
+                    },
+                "outer_query": {
+                    'SELECT': [
+                        {'ID': 'geom_id', 'EXPRESSION': '{{inner.cell_id}}'},
+                        {'ID': 'geom', 'EXPRESSION': 'RawColumn({{inner.cell_geom}})'},
+                        {'ID': 'data', 'EXPRESSION': '{{inner.data}}'},
+                        ]
+                    },
+                "geom_id_entity": {'ID': 'geom_id'},
+                "geom_entity": {'ID': 'geom'},
                 "data_entity": {
-                    "expression": "func.sum({Result.x}/{Result.cell.area})",
-                    "label": "x",
-                    "min": 0,
-                    "max": .25,
+                    'ID': 'data',
+                    'min': 0,
+                    'max': .25,
                     },
-                "grouping_entities": [
-                    ],
-                "geom_entity": {
-                    "expression": "{Result.cell.geom}.RAW",
-                    },
-                "geom_id_entity": {
-                    "expression": "{Result.cell.id}"
-                    },
-                "filters": [],
                 "disabled": False
                 }
             ],
+
         "base_layers": [
             ],
+
         "overlay_layers": [
             ]
         }
 
 summary_bar = {
-        "quantity_fields": [
-            {
-                'id': 'Result.cell.area:sum',
-                'label': 'Cell Area (km^2): sum',
-                'entity': {
-                    'expression': 'func.sum({Result.cell.area})/1000000'
-                    },
-                'format': '%.1e km^2'
-                },
-            ],
-        'filter_groups': ['data'],
+       'primary_filter_groups': ['data'],
         'base_filter_groups': ['scenario']
         }
 
 initial_state = {
-        "summary_bar": {
-            "selected": "Result.cell.area:sum"
+        "facets": {
+            "initial_quantity_field_id": 'result.cell.area:sum',
             },
 
         "data_views": [
@@ -166,7 +228,7 @@ initial_state = {
                     'id': 'substrates',
                     },
                 "initial_quantity_field": {
-                    'id': 'Result.cell.area:sum',
+                    'id': 'result.cell.id:count',
                     }
                 },
             ]
